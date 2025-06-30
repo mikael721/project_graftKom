@@ -1,0 +1,11 @@
+Model Information:
+* title:	Vending machine with feet
+* source:	https://sketchfab.com/3d-models/vending-machine-with-feet-42dc0771e4b3432b9252f9547bb132e4
+* author:	harway (https://sketchfab.com/harway)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Vending machine with feet" (https://sketchfab.com/3d-models/vending-machine-with-feet-42dc0771e4b3432b9252f9547bb132e4) by harway (https://sketchfab.com/harway) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

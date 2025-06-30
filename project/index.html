@@ -1,0 +1,2286 @@
+<!-- 
+Cara Run:
+NOTE: perlu google Setting -> Privacy and Security -> site settings -> Pop-ups and redirects -> turn on "Sites can send pop-ups and use redirects" 
+ terminal:
+ - PERLU RUN "npm instal" buat node_modules
+ - run: "python -m http.server 8000"
+ Open:
+ http://localhost:8000
+
+ MACAM-MACAM ENDING:
+ 1. kalau task dilakukan secara urut dari atas ke bawah
+ 2. kalau task semua dilakukan 7 kali
+ 3. kalau task gumbal 5 kali dan Light task 11 kali -> hint ada di corner bawah layar -> di block buat reveal aljabra 
+ -> yang kanan bawah = 7 -> kalau diat kanan ada 3d 7 di pool area
+ Jawab: Lampu = 11 kali dan Gumball = 5 kali
+ 4. kalau coin di click 
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js Open World</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+      #instructions {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+      }
+      #tasks {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+      }
+      #hint1 {
+        position: absolute;
+        bottom: 0px;
+        left: 0px;
+        background: rgba(0, 0, 0, 0.5);
+        color: rgba(255, 255, 255, 0);
+        font-family: Arial, sans-serif;
+        padding: 10px;
+        border-radius: 5px;
+      }
+
+      #hint2 {
+        position: absolute;
+        bottom: 0px;
+        right: 0px;
+        background: rgba(0, 0, 0, 0.5);
+        color: rgba(255, 255, 255, 0);
+        font-family: Arial, sans-serif;
+        padding: 10px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="instructions">
+      Use WASD keys to move, mouse to look around. Left-click to start/animate.
+    </div>
+    <div id="tasks">
+      <h3>Tasks:</h3>
+      <ul id="taskList"></ul>
+    </div>
+    <div id="hint1">3G + 2L = 37</div>
+    <div id="hint2">4G - L -1 =</div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      let taskSequenceCounter = 0;
+      let coin = 0;
+      let tasks = [
+        { task: "Play pool", number: 0, completed: false },
+        { task: "Get a Gumball", number: 0, completed: false },
+        { task: "Put a can on the floor", number: 0, completed: false },
+        { task: "Play pacman", number: 0, completed: false },
+        { task: "Flip the light switch", number: 0, completed: false },
+      ];
+
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      shuffle(tasks);
+
+      const positions = [0, 0, 0, 0, 0];
+      for (let i = 0; i < tasks.length; i++) {
+        if (tasks[i].task === "Play pool") {
+          positions[0] = i;
+        } else if (tasks[i].task === "Get a Gumball") {
+          positions[1] = i;
+        } else if (tasks[i].task === "Put a can on the floor") {
+          positions[2] = i;
+        } else if (tasks[i].task === "Play pacman") {
+          positions[3] = i;
+        } else if (tasks[i].task === "Flip the light switch") {
+          positions[4] = i;
+        }
+      }
+
+      function updateTaskDisplay() {
+        const taskList = document.getElementById("taskList");
+        taskList.innerHTML = "";
+
+        tasks.forEach((task, index) => {
+          const li = document.createElement("li");
+          li.textContent = `${task.task}: ${task.number} ${
+            task.completed ? "✅" : ""
+          }`;
+          taskList.appendChild(li);
+        });
+      }
+
+      // Initialize display
+      updateTaskDisplay();
+
+      // Scene setup
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.y = 1.7; // Eye height
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+      document.body.appendChild(renderer.domElement);
+
+      const ambientLight2 = new THREE.AmbientLight(0x200020, 0);
+      scene.add(ambientLight2);
+
+      // Lighting setup - DARKENED
+      const ambientLight = new THREE.AmbientLight(0x200020, 0.3);
+      scene.add(ambientLight);
+
+      const ceilingLight1 = new THREE.PointLight(0xffffcc, 0.6, 30);
+      ceilingLight1.position.set(0, 4.5, 0);
+      ceilingLight1.castShadow = true;
+      ceilingLight1.shadow.mapSize.width = 1024;
+      ceilingLight1.shadow.mapSize.height = 1024;
+      scene.add(ceilingLight1);
+
+      //NEW LIGHT 1
+      const lightFixtureGeometry = new THREE.SphereGeometry(0.2, 16, 8);
+      const lightFixtureMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffcc,
+        emissive: 0xffffcc,
+        emissiveIntensity: 0.5,
+      });
+      const lightFixture = new THREE.Mesh(
+        lightFixtureGeometry,
+        lightFixtureMaterial
+      );
+      lightFixture.position.copy(ceilingLight1.position);
+      scene.add(lightFixture);
+
+      //NEW LIGHT 2
+      const ceilingLight2 = new THREE.PointLight(0xffffcc, 0.6, 30);
+      ceilingLight2.position.set(-10, 4.5, -10);
+      ceilingLight2.castShadow = true;
+      ceilingLight2.shadow.mapSize.width = 1024;
+      ceilingLight2.shadow.mapSize.height = 1024;
+      scene.add(ceilingLight2);
+
+      const lightFixtureGeometry2 = new THREE.SphereGeometry(0.2, 16, 8);
+      const lightFixtureMaterial2 = new THREE.MeshStandardMaterial({
+        color: 0xffffcc,
+        emissive: 0xffffcc,
+        emissiveIntensity: 0.5,
+      });
+      const lightFixture2 = new THREE.Mesh(
+        lightFixtureGeometry,
+        lightFixtureMaterial
+      );
+      lightFixture2.position.copy(ceilingLight2.position);
+      scene.add(lightFixture2);
+
+      //NEW LIGHT 3
+      const ceilingLight3 = new THREE.PointLight(0xffffcc, 0.6, 30);
+      ceilingLight3.position.set(-10, 4.5, 11);
+      ceilingLight3.castShadow = true;
+      ceilingLight3.shadow.mapSize.width = 1024;
+      ceilingLight3.shadow.mapSize.height = 1024;
+      scene.add(ceilingLight3);
+
+      const lightFixtureGeometry3 = new THREE.SphereGeometry(0.2, 16, 8);
+      const lightFixtureMaterial3 = new THREE.MeshStandardMaterial({
+        color: 0xffffcc,
+        emissive: 0xffffcc,
+        emissiveIntensity: 0.5,
+      });
+      const lightFixture3 = new THREE.Mesh(
+        lightFixtureGeometry,
+        lightFixtureMaterial
+      );
+      lightFixture3.position.copy(ceilingLight3.position);
+      scene.add(lightFixture3);
+
+      //NEW LIGHT 4
+      const ceilingLight4 = new THREE.PointLight(0xffffcc, 0.6, 30);
+      ceilingLight4.position.set(10, 4.5, 11);
+      ceilingLight4.castShadow = true;
+      ceilingLight4.shadow.mapSize.width = 1024;
+      ceilingLight4.shadow.mapSize.height = 1024;
+      scene.add(ceilingLight4);
+
+      const lightFixtureGeometry4 = new THREE.SphereGeometry(0.2, 16, 8);
+      const lightFixtureMaterial4 = new THREE.MeshStandardMaterial({
+        color: 0xffffcc,
+        emissive: 0xffffcc,
+        emissiveIntensity: 0.5,
+      });
+      const lightFixture4 = new THREE.Mesh(
+        lightFixtureGeometry,
+        lightFixtureMaterial
+      );
+      lightFixture4.position.copy(ceilingLight4.position);
+      scene.add(lightFixture4);
+
+      //NEW LIGHT 5
+      const ceilingLight5 = new THREE.PointLight(0xffffcc, 0.6, 30);
+      ceilingLight5.position.set(10, 4.5, -11);
+      ceilingLight5.castShadow = true;
+      ceilingLight5.shadow.mapSize.width = 1024;
+      ceilingLight5.shadow.mapSize.height = 1024;
+      scene.add(ceilingLight5);
+
+      const lightFixtureGeometry5 = new THREE.SphereGeometry(0.2, 16, 8);
+      const lightFixtureMaterial5 = new THREE.MeshStandardMaterial({
+        color: 0xffffcc,
+        emissive: 0xffffcc,
+        emissiveIntensity: 0.5,
+      });
+      const lightFixture5 = new THREE.Mesh(
+        lightFixtureGeometry,
+        lightFixtureMaterial
+      );
+      lightFixture5.position.copy(ceilingLight5.position);
+      scene.add(lightFixture5);
+
+      // Store all lights in an array for easy toggling
+      const allLights = [
+        ceilingLight1,
+        ceilingLight2,
+        ceilingLight3,
+        ceilingLight4,
+        ceilingLight5,
+      ];
+
+      // Store all light fixtures in an array for easy toggling
+      const allLightFixtures = [
+        lightFixture,
+        lightFixture2,
+        lightFixture3,
+        lightFixture4,
+        lightFixture5,
+      ];
+
+      let lightsOn = true;
+
+      function toggleLights() {
+        lightsOn = !lightsOn;
+
+        allLights.forEach((light) => {
+          light.intensity = lightsOn ? 0.6 : 0;
+        });
+
+        allLightFixtures.forEach((fixture) => {
+          fixture.material.emissiveIntensity = lightsOn ? 0.5 : 0;
+        });
+
+        if (lightsOn) {
+          ambientLight.intensity = 0.3;
+          ambientLight2.intensity = 0;
+        } else {
+          ambientLight.intensity = 0;
+          ambientLight2.intensity = 0.9;
+        }
+      }
+
+      const floorSize = 150;
+      const floorTextureLoader = new THREE.TextureLoader();
+      const floorTexture = floorTextureLoader.load(
+        "https://threejs.org/examples/textures/hardwood2_diffuse.jpg"
+      );
+      floorTexture.wrapS = THREE.RepeatWrapping;
+      floorTexture.wrapT = THREE.RepeatWrapping;
+      floorTexture.repeat.set(30, 30);
+
+      const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
+      const floorMaterial = new THREE.MeshStandardMaterial({
+        map: floorTexture,
+        side: THREE.DoubleSide,
+      });
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const collisionObjects = [];
+
+      const roomSize = 40;
+      const wallHeight = 6;
+      const wallThickness = 0.2;
+      const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+
+      // Back wall
+      const backWall = new THREE.Mesh(
+        new THREE.BoxGeometry(roomSize, wallHeight, wallThickness),
+        wallMaterial
+      );
+      backWall.position.set(0, wallHeight / 2, -roomSize / 2);
+      scene.add(backWall);
+      const backWallCollider = new THREE.Box3().setFromObject(backWall);
+      backWallCollider.min.z -= 0.5;
+      backWallCollider.max.z += 0.5;
+      collisionObjects.push(backWallCollider);
+
+      // Left wall
+      const leftWall = new THREE.Mesh(
+        new THREE.BoxGeometry(wallThickness, wallHeight, roomSize),
+        wallMaterial
+      );
+      leftWall.position.set(-roomSize / 2, wallHeight / 2, 0);
+      scene.add(leftWall);
+      const leftWallCollider = new THREE.Box3().setFromObject(leftWall);
+      leftWallCollider.min.x -= 0.5;
+      leftWallCollider.max.x += 0.5;
+      collisionObjects.push(leftWallCollider);
+
+      // Right wall
+      const rightWall = new THREE.Mesh(
+        new THREE.BoxGeometry(wallThickness, wallHeight, roomSize),
+        wallMaterial
+      );
+      rightWall.position.set(roomSize / 2, wallHeight / 2, 0);
+      scene.add(rightWall);
+      const rightWallCollider = new THREE.Box3().setFromObject(rightWall);
+      rightWallCollider.min.x -= 0.5;
+      rightWallCollider.max.x += 0.5;
+      collisionObjects.push(rightWallCollider);
+
+      // Front wall with door
+      const doorWidth = 4;
+      const doorHeight = 4;
+
+      // Left part of front wall
+      const frontWallLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          (roomSize - doorWidth) / 2,
+          wallHeight,
+          wallThickness
+        ),
+        wallMaterial
+      );
+      frontWallLeft.position.set(
+        -(roomSize + doorWidth) / 4,
+        wallHeight / 2,
+        roomSize / 2
+      );
+      scene.add(frontWallLeft);
+      const frontWallLeftCollider = new THREE.Box3().setFromObject(
+        frontWallLeft
+      );
+      frontWallLeftCollider.min.z -= 0.5;
+      frontWallLeftCollider.max.z += 0.5;
+      collisionObjects.push(frontWallLeftCollider);
+
+      // Right part of front wall
+      const frontWallRight = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          (roomSize - doorWidth) / 2,
+          wallHeight,
+          wallThickness
+        ),
+        wallMaterial
+      );
+      frontWallRight.position.set(
+        (roomSize + doorWidth) / 4,
+        wallHeight / 2,
+        roomSize / 2
+      );
+      scene.add(frontWallRight);
+      const frontWallRightCollider = new THREE.Box3().setFromObject(
+        frontWallRight
+      );
+      frontWallRightCollider.min.z -= 0.5;
+      frontWallRightCollider.max.z += 0.5;
+      collisionObjects.push(frontWallRightCollider);
+
+      // Top part of front wall
+      const frontWallTop = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          doorWidth,
+          wallHeight - doorHeight,
+          wallThickness
+        ),
+        wallMaterial
+      );
+      frontWallTop.position.set(
+        0,
+        wallHeight - (wallHeight - doorHeight) / 2,
+        roomSize / 2
+      );
+      scene.add(frontWallTop);
+      const frontWallTopCollider = new THREE.Box3().setFromObject(frontWallTop);
+      frontWallTopCollider.min.z -= 0.5;
+      frontWallTopCollider.max.z += 0.5;
+      collisionObjects.push(frontWallTopCollider);
+
+      // Door
+      const doorGeometry = new THREE.BoxGeometry(
+        doorWidth,
+        doorHeight,
+        wallThickness
+      );
+      const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+      const door = new THREE.Mesh(doorGeometry, doorMaterial);
+      door.position.set(0, doorHeight / 2, roomSize / 2);
+      scene.add(door);
+
+      // Roof
+      const roofGeometry = new THREE.BoxGeometry(
+        roomSize,
+        wallThickness,
+        roomSize
+      );
+      const roofMaterial = new THREE.MeshStandardMaterial({
+        color: 0x8b4513,
+        transparent: true,
+        opacity: 1,
+      });
+      const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+      roof.position.set(0, wallHeight, 0);
+      scene.add(roof);
+
+      //BARANG BERANIMASI
+      let mixer;
+      let poolModel;
+      let poolAnimations = [];
+      let isPoolAnimating = false;
+      let poolCollider;
+
+      let arcadeMixer;
+      let arcadeModel;
+      let arcadeAnimations = [];
+      let isArcadeAnimating = false;
+      let arcadeCollider;
+
+      let gumballMixer;
+      let gumballModel;
+      let gumballAnimations = [];
+      let isGumballAnimating = false;
+      let gumballCollider;
+
+      let vendingMixer;
+      let vendingModel;
+      let vendingAnimations = [];
+      let isVendingAnimating = false;
+      let vendingCollider;
+
+      let lightSwitchMixer;
+      let lightSwitchModel;
+      let lightSwitchAnimations = [];
+      let isLightSwitchAnimating = false;
+      let lightSwitchCollider;
+
+      let boxHelper;
+
+      let coinMixer;
+      let coinModel;
+      let coinAnimations = [];
+      let isCoinAnimating = false;
+      let coinCollider;
+
+      // Load GLTF model coin
+      const coinLoader = new GLTFLoader();
+      coinLoader.load(
+        "asset/coin/scene.gltf",
+        (gltf) => {
+          coinModel = gltf.scene;
+          coinModel.position.set(-5, 2.5, -5);
+          coinModel.scale.set(0.03, 0.03, 0.03);
+
+          coinModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isCoin = true;
+            }
+          });
+
+          scene.add(coinModel);
+
+          coinCollider = new THREE.Box3().setFromObject(coinModel);
+          collisionObjects.push(coinCollider);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            coinMixer = new THREE.AnimationMixer(coinModel);
+            gltf.animations.forEach((clip) => {
+              const action = coinMixer.clipAction(clip);
+              action.loop = THREE.LoopRepeat;
+              action.play();
+              coinAnimations.push(action);
+            });
+          }
+
+          startCoinMovement();
+        },
+        (progress) => {
+          console.log(
+            "Loading coin progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading coin model:", error);
+        }
+      );
+
+      let coinDirection = 0;
+      const coinSpeed = 0.04;
+      const movementDistance = 10;
+      let currentPosition = { x: -5, y: 2.5, z: -5 };
+
+      function startCoinMovement() {
+        function moveCoin() {
+          switch (coinDirection) {
+            case 0:
+              currentPosition.x += coinSpeed;
+              if (currentPosition.x >= -5 + movementDistance) coinDirection++;
+              break;
+            case 1:
+              currentPosition.z += coinSpeed;
+              if (currentPosition.z >= -5 + movementDistance) coinDirection++;
+              break;
+            case 2:
+              currentPosition.x -= coinSpeed;
+              if (currentPosition.x <= -5) coinDirection++;
+              break;
+            case 3:
+              currentPosition.z -= coinSpeed;
+              if (currentPosition.z <= -5) {
+                coinDirection = 0;
+              }
+              break;
+          }
+
+          if (coinModel) {
+            coinModel.position.set(
+              currentPosition.x,
+              currentPosition.y,
+              currentPosition.z
+            );
+          }
+        }
+
+        function animateCoinMovement() {
+          moveCoin();
+          requestAnimationFrame(animateCoinMovement);
+        }
+
+        animateCoinMovement();
+      }
+
+      // Load GLTF model light switch
+      const lightSwitchLoader = new GLTFLoader();
+      lightSwitchLoader.load(
+        "asset/light_switch/scene.gltf",
+        (gltf) => {
+          lightSwitchModel = gltf.scene;
+          lightSwitchModel.position.set(-4, 2, 19.9);
+          lightSwitchModel.rotation.y = Math.PI / 2;
+          lightSwitchModel.scale.set(5, 5, 5);
+
+          lightSwitchModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isLightSwitch = true; //buat save boolean animasi
+            }
+          });
+
+          scene.add(lightSwitchModel);
+
+          lightSwitchCollider = new THREE.Box3().setFromObject(
+            lightSwitchModel
+          );
+          collisionObjects.push(lightSwitchCollider);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            lightSwitchMixer = new THREE.AnimationMixer(lightSwitchModel);
+            gltf.animations.forEach((clip) => {
+              const action = lightSwitchMixer.clipAction(clip);
+              action.loop = THREE.LoopOnce;
+              action.clampWhenFinished = true;
+              lightSwitchAnimations.push(action);
+            });
+          }
+        },
+        (progress) => {
+          console.log(
+            "Loading light switch progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading light switch model:", error);
+        }
+      );
+
+      // Pool
+      const gltfLoader = new GLTFLoader();
+      gltfLoader.load(
+        "asset/pool_test/scene.gltf",
+        (gltf) => {
+          poolModel = gltf.scene;
+          poolModel.position.set(15, 0, -5);
+          poolModel.scale.set(0.05, 0.045, 0.05);
+
+          poolModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isPool = true;
+            }
+          });
+
+          scene.add(poolModel);
+
+          poolCollider = new THREE.Box3().setFromObject(poolModel);
+          poolCollider.max.y += 0.1;
+          collisionObjects.push(poolCollider);
+
+          // const boxHelper = new THREE.Box3Helper(
+          //   poolCollider,
+          //   new THREE.Color(0xff0000)
+          // );
+          // scene.add(boxHelper);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            mixer = new THREE.AnimationMixer(poolModel);
+            gltf.animations.forEach((clip) => {
+              const action = mixer.clipAction(clip);
+              action.loop = THREE.LoopOnce;
+              action.clampWhenFinished = true;
+              poolAnimations.push(action);
+            });
+          }
+        },
+        (progress) => {
+          console.log(
+            "Loading progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading GLTF model:", error);
+        }
+      );
+
+      // pool2
+      let mixer2;
+      let poolModel2;
+      let poolAnimations2 = [];
+      let isPoolAnimating2 = false;
+      let poolCollider2;
+
+      const gltfLoader2 = new GLTFLoader();
+
+      gltfLoader2.load(
+        "asset/pool_test/scene.gltf",
+        (gltf) => {
+          poolModel2 = gltf.scene;
+          poolModel2.position.set(15, 0, 5);
+          poolModel2.scale.set(0.05, 0.045, 0.05);
+
+          poolModel2.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isPool2 = true;
+            }
+          });
+
+          scene.add(poolModel2);
+
+          poolCollider2 = new THREE.Box3().setFromObject(poolModel2);
+          poolCollider2.max.y += 0.1;
+          collisionObjects.push(poolCollider2);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            mixer2 = new THREE.AnimationMixer(poolModel2);
+            gltf.animations.forEach((clip) => {
+              const action = mixer2.clipAction(clip);
+              action.loop = THREE.LoopOnce;
+              action.clampWhenFinished = true;
+              poolAnimations2.push(action);
+            });
+          }
+        },
+        (progress) => {
+          console.log(
+            "Loading progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading GLTF model:", error);
+        }
+      );
+
+      //pacman
+      const arcadeLoader = new GLTFLoader();
+      arcadeLoader.load(
+        "asset/pacman_arcade__animation/scene.gltf",
+        (gltf) => {
+          arcadeModel = gltf.scene;
+          arcadeModel.position.set(0, 0, -roomSize / 2.5);
+          arcadeModel.scale.set(0.04, 0.04, 0.04);
+
+          arcadeModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isArcade = true;
+            }
+          });
+
+          scene.add(arcadeModel);
+
+          arcadeCollider = new THREE.Box3().setFromObject(arcadeModel);
+          collisionObjects.push(arcadeCollider);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            arcadeMixer = new THREE.AnimationMixer(arcadeModel);
+            gltf.animations.forEach((clip) => {
+              const action = arcadeMixer.clipAction(clip);
+              action.loop = THREE.LoopOnce;
+              action.clampWhenFinished = true;
+              arcadeAnimations.push(action);
+            });
+          }
+        },
+        (progress) => {
+          console.log(
+            "Loading arcade progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading arcade model:", error);
+        }
+      );
+
+      // Gumball Machine
+      const gumballLoader = new GLTFLoader();
+      gumballLoader.load(
+        "asset/gumball_machine_free_download/scene.gltf",
+        (gltf) => {
+          gumballModel = gltf.scene;
+          gumballModel.position.set(4, 1, -roomSize / -2.5);
+          gumballModel.scale.set(1, 1, 1);
+
+          gumballModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isGumballMachine = true;
+            }
+          });
+
+          scene.add(gumballModel);
+
+          gumballCollider = new THREE.Box3().setFromObject(gumballModel);
+          collisionObjects.push(gumballCollider);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            gumballMixer = new THREE.AnimationMixer(gumballModel);
+            gltf.animations.forEach((clip) => {
+              const action = gumballMixer.clipAction(clip);
+              action.loop = THREE.LoopOnce;
+              action.clampWhenFinished = true;
+              gumballAnimations.push(action);
+            });
+          }
+        },
+        (progress) => {
+          console.log(
+            "Loading Gumball Machine progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading Gumball Machine model:", error);
+        }
+      );
+
+      //  Vending Machine
+      const vendingLoader = new GLTFLoader();
+      vendingLoader.load(
+        "asset/vending_machine_with_feet/scene.gltf",
+        (gltf) => {
+          vendingModel = gltf.scene;
+          vendingModel.position.set(-16, 0, -roomSize / 30);
+          vendingModel.scale.set(0.012, 0.012, 0.012);
+          vendingModel.rotation.y = Math.PI / 4 + Math.PI / 4;
+          vendingModel.traverse((node) => {
+            if (node.isMesh) {
+              node.material.emissive.set(0x333333);
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isVendingMachine = true;
+            }
+          });
+
+          scene.add(vendingModel);
+
+          vendingCollider = new THREE.Box3().setFromObject(vendingModel);
+          collisionObjects.push(vendingCollider);
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            vendingMixer = new THREE.AnimationMixer(vendingModel);
+            gltf.animations.forEach((clip) => {
+              const action = vendingMixer.clipAction(clip);
+              action.loop = THREE.LoopOnce;
+              action.clampWhenFinished = true;
+              vendingAnimations.push(action);
+            });
+          }
+        },
+        (progress) => {
+          console.log(
+            "Loading Vending Machine progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading Vending Machine model:", error);
+        }
+      );
+
+      // Controls setup(kalau click ilangin pointer)
+      const controls = new PointerLockControls(camera, document.body);
+      document.addEventListener("click", function () {
+        controls.lock();
+      });
+
+      //BENDA STATIC
+      let fnafMixer;
+      let fnafModel;
+      let fnafAnimations = [];
+      let isFnafAnimating = false;
+      let fnafCollider;
+
+      //  FNAF arcade
+      const fnafLoader = new GLTFLoader();
+      fnafLoader.load(
+        "asset/fnaf_sb_playable_arcades_part_1/scene.gltf",
+        (gltf) => {
+          fnafModel = gltf.scene;
+          fnafModel.position.set(-15, 0, -roomSize / 2.7);
+          fnafModel.scale.set(1.5, 1.5, 1.5);
+          fnafModel.rotation.y = Math.PI / 4;
+
+          fnafModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = false;
+              node.userData.isFnafArcade = true;
+            }
+          });
+
+          scene.add(fnafModel);
+
+          fnafCollider = new THREE.Box3().setFromObject(fnafModel);
+
+          // boxHelper = new THREE.Box3Helper(
+          //   fnafCollider,
+          //   new THREE.Color(0xff0000)
+          // );
+          // scene.add(boxHelper);
+
+          collisionObjects.push(fnafCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading FNAF arcade progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading FNAF arcade model:", error);
+        }
+      );
+
+      function updateBoxHelper() {
+        if (boxHelper) {
+          fnafCollider.setFromObject(fnafModel);
+          boxHelper.update();
+        }
+      }
+
+      const fnafLoader2 = new GLTFLoader();
+      fnafLoader2.load(
+        "asset/fnaf_sb_playable_arcades_part_1/scene.gltf",
+        (gltf) => {
+          fnafModel = gltf.scene;
+          fnafModel.position.set(13, 0, -roomSize / 2.7);
+          fnafModel.scale.set(1.5, 1.5, 1.5);
+          fnafModel.rotation.y = Math.PI / -4;
+          fnafModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = false;
+              node.userData.isFnafArcade = true;
+            }
+          });
+
+          scene.add(fnafModel);
+
+          fnafCollider = new THREE.Box3().setFromObject(fnafModel);
+          collisionObjects.push(fnafCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading FNAF arcade progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading FNAF arcade model:", error);
+        }
+      );
+
+      const fnafLoader3 = new GLTFLoader();
+      fnafLoader3.load(
+        "asset/fnaf_sb_playable_arcades_part_1/scene.gltf",
+        (gltf) => {
+          fnafModel = gltf.scene;
+          fnafModel.position.set(14, 0, -roomSize / -2.8);
+          fnafModel.scale.set(1.5, 1.5, 1.5);
+          fnafModel.rotation.y = -Math.PI / 1.3;
+          fnafModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = false;
+              node.userData.isFnafArcade = true;
+            }
+          });
+
+          scene.add(fnafModel);
+
+          fnafCollider = new THREE.Box3().setFromObject(fnafModel);
+          collisionObjects.push(fnafCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading FNAF arcade progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading FNAF arcade model:", error);
+        }
+      );
+
+      const fnafLoader4 = new GLTFLoader();
+      fnafLoader4.load(
+        "asset/fnaf_sb_playable_arcades_part_1/scene.gltf",
+        (gltf) => {
+          fnafModel = gltf.scene;
+          fnafModel.position.set(-14, 0, -roomSize / -2.8);
+          fnafModel.scale.set(1.5, 1.5, 1.5);
+          fnafModel.rotation.y = -Math.PI / -1.3;
+          fnafModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = false;
+              node.userData.isFnafArcade = true;
+            }
+          });
+
+          scene.add(fnafModel);
+
+          fnafCollider = new THREE.Box3().setFromObject(fnafModel);
+          collisionObjects.push(fnafCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading FNAF arcade progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading FNAF arcade model:", error);
+        }
+      );
+
+      let lampMixer;
+      let lampModel;
+      let lampAnimations = [];
+      let isLampAnimating = false;
+      let lampCollider;
+
+      // IKEA lamp
+      const lampLoader = new GLTFLoader();
+      lampLoader.load(
+        "asset/lamp_skurup_-_ikea/scene.gltf",
+        (gltf) => {
+          lampModel = gltf.scene;
+          lampModel.position.set(0, 6, 0);
+          lampModel.scale.set(2, 2, 2);
+          lampModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isLamp = true;
+            }
+          });
+
+          scene.add(lampModel);
+
+          lampCollider = new THREE.Box3().setFromObject(lampModel);
+          collisionObjects.push(lampCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA lamp progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading IKEA lamp model:", error);
+        }
+      );
+
+      //IKEA 2
+      const lampLoader2 = new GLTFLoader();
+      lampLoader2.load(
+        "asset/lamp_skurup_-_ikea/scene.gltf",
+        (gltf) => {
+          lampModel = gltf.scene;
+          lampModel.position.set(-10, 6, -10);
+          lampModel.scale.set(2, 2, 2);
+          lampModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isLamp = true;
+            }
+          });
+
+          scene.add(lampModel);
+
+          lampCollider = new THREE.Box3().setFromObject(lampModel);
+          collisionObjects.push(lampCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA lamp progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading IKEA lamp model:", error);
+        }
+      );
+
+      //IKEA 3
+      const lampLoader3 = new GLTFLoader();
+      lampLoader3.load(
+        "asset/lamp_skurup_-_ikea/scene.gltf",
+        (gltf) => {
+          lampModel = gltf.scene;
+          lampModel.position.set(-10, 6, 11);
+          lampModel.scale.set(2, 2, 2);
+          lampModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isLamp = true;
+            }
+          });
+
+          scene.add(lampModel);
+
+          lampCollider = new THREE.Box3().setFromObject(lampModel);
+          collisionObjects.push(lampCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA lamp progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading IKEA lamp model:", error);
+        }
+      );
+
+      //IKEA 4
+      const lampLoader4 = new GLTFLoader();
+      lampLoader4.load(
+        "asset/lamp_skurup_-_ikea/scene.gltf",
+        (gltf) => {
+          lampModel = gltf.scene;
+          lampModel.position.set(10, 6, 11);
+          lampModel.scale.set(2, 2, 2);
+          lampModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isLamp = true;
+            }
+          });
+
+          scene.add(lampModel);
+
+          lampCollider = new THREE.Box3().setFromObject(lampModel);
+          collisionObjects.push(lampCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA lamp progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading IKEA lamp model:", error);
+        }
+      );
+
+      //IKEA 5
+      const lampLoader5 = new GLTFLoader();
+      lampLoader5.load(
+        "asset/lamp_skurup_-_ikea/scene.gltf",
+        (gltf) => {
+          lampModel = gltf.scene;
+          lampModel.position.set(10, 6, -11);
+          lampModel.scale.set(2, 2, 2);
+          lampModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isLamp = true;
+            }
+          });
+
+          scene.add(lampModel);
+
+          lampCollider = new THREE.Box3().setFromObject(lampModel);
+          collisionObjects.push(lampCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA lamp progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading IKEA lamp model:", error);
+        }
+      );
+
+      //TABLE
+      let tableAndChairsModel;
+      let tableAndChairsCollider;
+
+      const tableAndChairsLoader = new GLTFLoader();
+      tableAndChairsLoader.load(
+        "asset/round_table_and_chairs/scene.gltf",
+        (gltf) => {
+          tableAndChairsModel = gltf.scene;
+          tableAndChairsModel.position.set(5, 0, 5);
+          tableAndChairsModel.scale.set(1.7, 1.7, 1.7);
+          tableAndChairsModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isTableAndChairs = true;
+            }
+          });
+
+          scene.add(tableAndChairsModel);
+
+          tableAndChairsCollider = new THREE.Box3().setFromObject(
+            tableAndChairsModel
+          );
+          collisionObjects.push(tableAndChairsCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA round table and chairs progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error(
+            "Error loading IKEA round table and chairs model:",
+            error
+          );
+        }
+      );
+
+      let tableAndChairsModel2;
+      let tableAndChairsCollider2;
+
+      const tableAndChairsLoader2 = new GLTFLoader();
+      tableAndChairsLoader2.load(
+        "asset/round_table_and_chairs/scene.gltf",
+        (gltf) => {
+          tableAndChairsModel2 = gltf.scene;
+          tableAndChairsModel2.position.set(-5, 0, 5);
+          tableAndChairsModel2.scale.set(1.7, 1.7, 1.7);
+          tableAndChairsModel2.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isTableAndChairs = true;
+            }
+          });
+
+          scene.add(tableAndChairsModel2);
+
+          tableAndChairsCollider2 = new THREE.Box3().setFromObject(
+            tableAndChairsModel2
+          );
+          collisionObjects.push(tableAndChairsCollider2);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA round table and chairs progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error(
+            "Error loading IKEA round table and chairs model:",
+            error
+          );
+        }
+      );
+
+      let tableAndChairsModel3;
+      let tableAndChairsCollider3;
+
+      const tableAndChairsLoader3 = new GLTFLoader();
+      tableAndChairsLoader.load(
+        "asset/round_table_and_chairs/scene.gltf",
+        (gltf) => {
+          tableAndChairsModel3 = gltf.scene;
+          tableAndChairsModel3.position.set(5, 0, -5);
+          tableAndChairsModel3.scale.set(1.7, 1.7, 1.7);
+          tableAndChairsModel3.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isTableAndChairs = true;
+            }
+          });
+
+          scene.add(tableAndChairsModel3);
+
+          tableAndChairsCollider3 = new THREE.Box3().setFromObject(
+            tableAndChairsModel3
+          );
+          collisionObjects.push(tableAndChairsCollider3);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA round table and chairs progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error(
+            "Error loading IKEA round table and chairs model:",
+            error
+          );
+        }
+      );
+
+      let tableAndChairsModel4;
+      let tableAndChairsCollider4;
+
+      const tableAndChairsLoader4 = new GLTFLoader();
+      tableAndChairsLoader4.load(
+        "asset/round_table_and_chairs/scene.gltf",
+        (gltf) => {
+          tableAndChairsModel4 = gltf.scene;
+          tableAndChairsModel4.position.set(-5, 0, -5);
+          tableAndChairsModel4.scale.set(1.7, 1.7, 1.7);
+          tableAndChairsModel4.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isTableAndChairs = true;
+            }
+          });
+
+          scene.add(tableAndChairsModel4);
+
+          tableAndChairsCollider4 = new THREE.Box3().setFromObject(
+            tableAndChairsModel4
+          );
+          collisionObjects.push(tableAndChairsCollider4);
+        },
+        (progress) => {
+          console.log(
+            "Loading IKEA round table and chairs progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error(
+            "Error loading IKEA round table and chairs model:",
+            error
+          );
+        }
+      );
+
+      let messyTackBoardModel;
+      let messyTackBoardCollider;
+
+      const messyTackBoardLoader = new GLTFLoader();
+      messyTackBoardLoader.load(
+        "asset/messy_tack_board/scene.gltf",
+        (gltf) => {
+          messyTackBoardModel = gltf.scene;
+          messyTackBoardModel.position.set(-19.8, 3, -8);
+          messyTackBoardModel.scale.set(0.1, 0.1, 0.1);
+          messyTackBoardModel.rotation.y = Math.PI / 2;
+          messyTackBoardModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isMessyTackBoard = true;
+            }
+          });
+
+          scene.add(messyTackBoardModel);
+
+          messyTackBoardCollider = new THREE.Box3().setFromObject(
+            messyTackBoardModel
+          );
+          collisionObjects.push(messyTackBoardCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading messy tack board progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading messy tack board model:", error);
+        }
+      );
+
+      let messyTackBoardModel2;
+      let messyTackBoardCollider2;
+
+      const messyTackBoardLoader2 = new GLTFLoader();
+      messyTackBoardLoader2.load(
+        "asset/messy_tack_board/scene.gltf",
+        (gltf) => {
+          messyTackBoardModel2 = gltf.scene;
+          messyTackBoardModel2.position.set(-19.8, 3, 5.5);
+          messyTackBoardModel2.scale.set(0.1, 0.1, 0.1);
+          messyTackBoardModel2.rotation.y = Math.PI / 2;
+          messyTackBoardModel2.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isMessyTackBoard = true;
+            }
+          });
+
+          scene.add(messyTackBoardModel2);
+
+          messyTackBoardCollider2 = new THREE.Box3().setFromObject(
+            messyTackBoardModel2
+          );
+          collisionObjects.push(messyTackBoardCollider2);
+        },
+        (progress) => {
+          console.log(
+            "Loading messy tack board progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading messy tack board model:", error);
+        }
+      );
+
+      let neonPostersModel;
+      let neonPostersCollider;
+
+      const neonPostersLoader = new GLTFLoader();
+      neonPostersLoader.load(
+        "asset/neon__posters/scene.gltf",
+        (gltf) => {
+          neonPostersModel = gltf.scene;
+          neonPostersModel.position.set(7, 2, -19.8);
+          neonPostersModel.scale.set(2, 2, 2);
+          neonPostersModel.rotation.y = Math.PI / 2;
+          neonPostersModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isNeonPosters = true;
+            }
+          });
+
+          scene.add(neonPostersModel);
+
+          neonPostersCollider = new THREE.Box3().setFromObject(
+            neonPostersModel
+          );
+          collisionObjects.push(neonPostersCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading neon posters progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading neon posters model:", error);
+        }
+      );
+
+      let neonPostersModel2;
+      let neonPostersCollider2;
+
+      const neonPostersLoader2 = new GLTFLoader();
+      neonPostersLoader2.load(
+        "asset/neon__posters/scene.gltf",
+        (gltf) => {
+          neonPostersModel2 = gltf.scene;
+          neonPostersModel2.position.set(-7, 2, -19.8);
+          neonPostersModel2.scale.set(2, 2, 2);
+          neonPostersModel2.rotation.y = Math.PI / 2;
+          neonPostersModel2.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isNeonPosters = true;
+            }
+          });
+
+          scene.add(neonPostersModel2);
+
+          neonPostersCollider2 = new THREE.Box3().setFromObject(
+            neonPostersModel2
+          );
+          collisionObjects.push(neonPostersCollider2);
+        },
+        (progress) => {
+          console.log(
+            "Loading neon posters progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading neon posters model:", error);
+        }
+      );
+
+      let numberSevenModel;
+      let numberSevenCollider;
+
+      const numberSevenLoader = new GLTFLoader();
+      numberSevenLoader.load(
+        "asset/3d_number_-_7_seven/scene.gltf",
+        (gltf) => {
+          numberSevenModel = gltf.scene;
+          numberSevenModel.position.set(19.8, 4, 0);
+          numberSevenModel.scale.set(5, 5, 5);
+          numberSevenModel.rotation.y = Math.PI / -2;
+          numberSevenModel.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.userData.isNumberSeven = true;
+            }
+          });
+
+          scene.add(numberSevenModel);
+
+          numberSevenCollider = new THREE.Box3().setFromObject(
+            numberSevenModel
+          );
+          collisionObjects.push(numberSevenCollider);
+        },
+        (progress) => {
+          console.log(
+            "Loading 3D number 7 progress: ",
+            (progress.loaded / progress.total) * 100,
+            "%"
+          );
+        },
+        (error) => {
+          console.error("Error loading 3D number 7 model:", error);
+        }
+      );
+
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      function showLoadingScreen(callback) {
+        const loadingScreen = document.createElement("div");
+        loadingScreen.style.position = "fixed";
+        loadingScreen.style.top = "0";
+        loadingScreen.style.left = "0";
+        loadingScreen.style.width = "100%";
+        loadingScreen.style.height = "100%";
+        loadingScreen.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        loadingScreen.style.color = "#fff";
+        loadingScreen.style.display = "flex";
+        loadingScreen.style.flexDirection = "column";
+        loadingScreen.style.justifyContent = "center";
+        loadingScreen.style.alignItems = "center";
+        loadingScreen.style.fontSize = "24px";
+
+        const progressBarContainer = document.createElement("div");
+        progressBarContainer.style.width = "80%";
+        progressBarContainer.style.backgroundColor = "#444"; //blue
+        progressBarContainer.style.borderRadius = "5px";
+        progressBarContainer.style.overflow = "hidden";
+        const progressBar = document.createElement("div");
+        progressBar.style.width = "0%";
+        progressBar.style.height = "20px";
+        progressBar.style.backgroundColor = "#00d0ff";
+
+        progressBarContainer.appendChild(progressBar);
+        loadingScreen.appendChild(progressBarContainer);
+
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "Picking Lock...";
+        loadingScreen.appendChild(loadingText);
+
+        document.body.appendChild(loadingScreen); // Show loading screen
+        //progress bar
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 2;
+          progressBar.style.width = `${progress}%`;
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            document.body.removeChild(loadingScreen); // remove loading screen
+            callback(); //bukak vidio
+          }
+        }, 100);
+      }
+
+      // Game ending 1
+      function openVideoPopup1() {
+        const videoUrl =
+          "https://youtube.com/shorts/g17UqBCkgbY?si=-C_Mh84A2UvPq0_b";
+        const width = screen.width;
+        const height = screen.height;
+
+        showLoadingScreen(() => {
+          const popup = window.open(
+            videoUrl,
+            "videoPopup",
+            `width=${width},height=${height},top=0,left=0,fullscreen=yes`
+          );
+
+          if (popup) {
+            popup.focus();
+
+            const interval = setInterval(function () {
+              if (popup.closed) {
+                clearInterval(interval);
+                location.reload(); // Refresh
+              }
+            }, 500); // cek kalau tertutup tiap 500 milisecond
+          } else {
+            alert(
+              "Please allow Pop-ups and redirects for this website in settings."
+            );
+          }
+        });
+      }
+
+      function showLoadingScreen2(callback) {
+        const loadingScreen = document.createElement("div");
+        loadingScreen.style.position = "fixed";
+        loadingScreen.style.top = "0";
+        loadingScreen.style.left = "0";
+        loadingScreen.style.width = "100%";
+        loadingScreen.style.height = "100%";
+        loadingScreen.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        loadingScreen.style.color = "#fff";
+        loadingScreen.style.display = "flex";
+        loadingScreen.style.flexDirection = "column";
+        loadingScreen.style.justifyContent = "center";
+        loadingScreen.style.alignItems = "center";
+        loadingScreen.style.fontSize = "24px";
+
+        const progressBarContainer = document.createElement("div");
+        progressBarContainer.style.width = "80%";
+        progressBarContainer.style.borderRadius = "5px";
+        progressBarContainer.style.overflow = "hidden";
+
+        const progressBar = document.createElement("div");
+        progressBar.style.width = "0%";
+        progressBar.style.height = "20px";
+        progressBar.style.backgroundColor = "#04ff00"; // green
+
+        progressBarContainer.appendChild(progressBar);
+        loadingScreen.appendChild(progressBarContainer);
+
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "Sending Message...";
+        loadingScreen.appendChild(loadingText);
+
+        document.body.appendChild(loadingScreen); // Show loading screen
+
+        // Progress bar
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 2;
+          progressBar.style.width = `${progress}%`;
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            document.body.removeChild(loadingScreen); // Remove loading screen
+            callback(); // Open video
+          }
+        }, 100);
+      }
+
+      // Game ending 2
+      function openVideoPopup2() {
+        const videoUrl = "https://youtu.be/IIx1k-myp5o?si=aEFbcm7rChBmavWS";
+        const width = screen.width;
+        const height = screen.height;
+
+        showLoadingScreen2(() => {
+          const popup = window.open(
+            videoUrl,
+            "videoPopup",
+            `width=${width},height=${height},top=0,left=0,fullscreen=yes`
+          );
+
+          if (popup) {
+            popup.focus();
+
+            const interval = setInterval(function () {
+              if (popup.closed) {
+                clearInterval(interval);
+                location.reload(); // Refresh
+              }
+            }, 500); // cek kalau tertutup tiap 500 milisecond
+          } else {
+            alert(
+              "Please allow Pop-ups and redirects for this website in settings."
+            );
+          }
+        });
+      }
+
+      function showLoadingScreen3(callback) {
+        const loadingScreen = document.createElement("div");
+        loadingScreen.style.position = "fixed";
+        loadingScreen.style.top = "0";
+        loadingScreen.style.left = "0";
+        loadingScreen.style.width = "100%";
+        loadingScreen.style.height = "100%";
+        loadingScreen.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        loadingScreen.style.color = "#fff";
+        loadingScreen.style.display = "flex";
+        loadingScreen.style.flexDirection = "column";
+        loadingScreen.style.justifyContent = "center";
+        loadingScreen.style.alignItems = "center";
+        loadingScreen.style.fontSize = "24px";
+
+        const progressBarContainer = document.createElement("div");
+        progressBarContainer.style.width = "80%";
+        progressBarContainer.style.borderRadius = "5px";
+        progressBarContainer.style.overflow = "hidden";
+
+        const progressBar = document.createElement("div");
+        progressBar.style.width = "0%";
+        progressBar.style.height = "20px";
+        progressBar.style.backgroundColor = "#e3001a"; // Red
+
+        progressBarContainer.appendChild(progressBar);
+        loadingScreen.appendChild(progressBarContainer);
+
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "Locking Position...";
+        loadingScreen.appendChild(loadingText);
+
+        document.body.appendChild(loadingScreen); // Show loading screen
+
+        // Progress bar
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 2;
+          progressBar.style.width = `${progress}%`;
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            document.body.removeChild(loadingScreen); // Remove loading screen
+            callback(); // Open video
+          }
+        }, 100);
+      }
+      // Game ending 3
+      function openVideoPopup3() {
+        const videoUrl = "https://youtu.be/HvSGnlQF9dQ?si=E4HnFT7_wat8yeuH";
+        const width = screen.width;
+        const height = screen.height;
+
+        showLoadingScreen3(() => {
+          const popup = window.open(
+            videoUrl,
+            "videoPopup",
+            `width=${width},height=${height},top=0,left=0,fullscreen=yes`
+          );
+
+          if (popup) {
+            popup.focus();
+
+            const interval = setInterval(function () {
+              if (popup.closed) {
+                clearInterval(interval);
+                location.reload(); // Refresh
+              }
+            }, 500); // cek kalau tertutup tiap 500 milisecond
+          } else {
+            alert(
+              "Please allow Pop-ups and redirects for this website in settings."
+            );
+          }
+        });
+      }
+
+      function showLoadingScreen4(callback) {
+        const loadingScreen = document.createElement("div");
+        loadingScreen.style.position = "fixed";
+        loadingScreen.style.top = "0";
+        loadingScreen.style.left = "0";
+        loadingScreen.style.width = "100%";
+        loadingScreen.style.height = "100%";
+        loadingScreen.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        loadingScreen.style.color = "#fff";
+        loadingScreen.style.display = "flex";
+        loadingScreen.style.flexDirection = "column";
+        loadingScreen.style.justifyContent = "center";
+        loadingScreen.style.alignItems = "center";
+        loadingScreen.style.fontSize = "24px";
+
+        const progressBarContainer = document.createElement("div");
+        progressBarContainer.style.width = "80%";
+        progressBarContainer.style.borderRadius = "5px";
+        progressBarContainer.style.overflow = "hidden";
+
+        const progressBar = document.createElement("div");
+        progressBar.style.width = "0%";
+        progressBar.style.height = "20px";
+        progressBar.style.backgroundColor = "#FFD700"; // Yellow
+
+        progressBarContainer.appendChild(progressBar);
+        loadingScreen.appendChild(progressBarContainer);
+
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "No more coin :( ...";
+        loadingScreen.appendChild(loadingText);
+
+        document.body.appendChild(loadingScreen); // Show loading screen
+
+        // Progress bar
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 2;
+          progressBar.style.width = `${progress}%`;
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            document.body.removeChild(loadingScreen); // Remove loading screen
+            callback(); // Open video
+          }
+        }, 100);
+      }
+      // Game ending 4
+      function openVideoPopup4() {
+        const videoUrl =
+          "https://youtube.com/shorts/EBA1pzKvsh4?si=kZ3dYzwwYFPHS8O_";
+        const width = screen.width;
+        const height = screen.height;
+
+        showLoadingScreen4(() => {
+          const popup = window.open(
+            videoUrl,
+            "videoPopup",
+            `width=${width},height=${height},top=0,left=0,fullscreen=yes`
+          );
+
+          if (popup) {
+            popup.focus();
+
+            const interval = setInterval(function () {
+              if (popup.closed) {
+                clearInterval(interval);
+                location.reload(); // Refresh
+              }
+            }, 500); // cek kalau tertutup tiap 500 milisecond
+          } else {
+            alert(
+              "Please allow Pop-ups and redirects for this website in settings."
+            );
+          }
+        });
+      }
+
+      //cek task
+      function taskCheckSeven() {
+        return tasks.every((task) => task.number === 7);
+      }
+      function taskCheckEquation() {
+        return (
+          tasks[positions[1]].number === 5 && tasks[positions[4]].number === 11
+        );
+      }
+
+      function taskCheck() {
+        return tasks.every((task) => task.completed === true);
+      }
+      // check game ending + update task
+      function updateTask(taskIndex, increment = 1) {
+        tasks[taskIndex].number += increment;
+
+        if (tasks[taskIndex].number >= 1 && taskIndex == taskSequenceCounter) {
+          tasks[taskIndex].completed = true;
+          taskSequenceCounter++;
+        }
+
+        if (taskCheck()) {
+          console.log("All tasks are complete!");
+          openVideoPopup1();
+        }
+
+        if (taskCheckSeven()) {
+          console.log("01101000 01100101 01101100 01101100 01101111");
+          openVideoPopup2();
+        }
+        if (taskCheckEquation()) {
+          openVideoPopup3();
+          console.log("so smart :)");
+        }
+        updateTaskDisplay();
+      }
+
+      function onClick(event) {
+        //kalau tidak escape
+        if (controls.isLocked) {
+          mouse.x = 0;
+          mouse.y = 0;
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObjects(scene.children, true);
+
+          // cek if ray intersect dgn benda
+          for (let i = 0; i < intersects.length; i++) {
+            //get coin
+            if (intersects[i].object.userData.isCoin) {
+              scene.remove(coinModel);
+
+              coinModel.traverse((node) => {
+                if (node.isMesh) {
+                  node.geometry.dispose();
+                  node.material.dispose();
+                }
+              });
+              console.log("coin got");
+              openVideoPopup4();
+              break;
+            }
+
+            //animasi light switch
+            if (intersects[i].object.userData.isLightSwitch) {
+              toggleLights();
+              //update tasks (number + completed)
+              updateTask(positions[4]);
+
+              if (lightSwitchAnimations.length > 0 && !isLightSwitchAnimating) {
+                lightSwitchAnimations.forEach((animation) => {
+                  animation.reset();
+                  animation.play();
+                });
+                isLightSwitchAnimating = true;
+                //berapa lama sebelom isak click lagi
+                setTimeout(() => {
+                  isLightSwitchAnimating = false;
+                }, 2000);
+              }
+              break;
+            }
+
+            // animasi pool
+            if (intersects[i].object.userData.isPool) {
+              if (poolAnimations.length > 0) {
+                if (!isPoolAnimating) {
+                  updateTask(positions[0]);
+
+                  poolAnimations.forEach((animation) => {
+                    animation.reset();
+                    animation.play();
+                  });
+                  isPoolAnimating = true;
+
+                  setTimeout(() => {
+                    isPoolAnimating = false;
+                  }, 2000);
+                }
+              }
+              break;
+            }
+            // animasi pool 2
+            if (intersects[i].object.userData.isPool2) {
+              if (poolAnimations2.length > 0 && !isPoolAnimating2) {
+                updateTask(positions[0]);
+
+                poolAnimations2.forEach((animation) => {
+                  animation.reset();
+                  animation.play();
+                });
+                isPoolAnimating2 = true;
+
+                setTimeout(() => {
+                  isPoolAnimating2 = false;
+                }, 2000);
+              }
+              break;
+            }
+
+            // animasi arcade
+            if (intersects[i].object.userData.isArcade) {
+              if (arcadeAnimations.length > 0) {
+                if (!isArcadeAnimating) {
+                  updateTask(positions[3]);
+
+                  arcadeAnimations.forEach((animation) => {
+                    animation.reset();
+                    animation.play();
+                  });
+                  isArcadeAnimating = true;
+
+                  setTimeout(() => {
+                    isArcadeAnimating = false;
+                  }, 2000);
+                }
+              }
+              break;
+            }
+
+            // animasi Gumball Machine
+            if (intersects[i].object.userData.isGumballMachine) {
+              if (gumballAnimations.length > 0) {
+                if (!isGumballAnimating) {
+                  updateTask(positions[1]);
+
+                  gumballAnimations.forEach((animation) => {
+                    animation.reset();
+                    animation.play();
+                  });
+                  isGumballAnimating = true;
+
+                  setTimeout(() => {
+                    isGumballAnimating = false;
+                  }, 2000);
+                }
+              }
+              break;
+            }
+            // animasi Vending Machine
+            if (intersects[i].object.userData.isVendingMachine) {
+              if (vendingAnimations.length > 0) {
+                if (!isVendingAnimating) {
+                  updateTask(positions[2]);
+
+                  vendingAnimations.forEach((animation) => {
+                    animation.reset();
+                    animation.play();
+                  });
+                  isVendingAnimating = true;
+
+                  setTimeout(() => {
+                    isVendingAnimating = false;
+                  }, 2000);
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+
+      document.addEventListener("click", onClick);
+
+      // Movement setup
+      let moveForward = false;
+      let moveBackward = false;
+      let moveLeft = false;
+      let moveRight = false;
+
+      const onKeyDown = function (event) {
+        switch (event.code) {
+          case "KeyW":
+            moveForward = true;
+            break;
+          case "KeyA":
+            moveLeft = true;
+            break;
+          case "KeyS":
+            moveBackward = true;
+            break;
+          case "KeyD":
+            moveRight = true;
+            break;
+        }
+      };
+
+      const onKeyUp = function (event) {
+        switch (event.code) {
+          case "KeyW":
+            moveForward = false;
+            break;
+          case "KeyA":
+            moveLeft = false;
+            break;
+          case "KeyS":
+            moveBackward = false;
+            break;
+          case "KeyD":
+            moveRight = false;
+            break;
+        }
+      };
+
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
+
+      // Movement variables
+      const velocity = new THREE.Vector3();
+      const direction = new THREE.Vector3();
+      let prevTime = performance.now();
+
+      const playerRadius = 0.5;
+
+      // cek kalau  player collide
+      function checkSphereBoxCollision(sphere, box) {
+        const closestPoint = new THREE.Vector3().copy(sphere.center);
+
+        //get closet point dari box (contoh wall)
+        closestPoint.x = Math.max(
+          box.min.x,
+          Math.min(closestPoint.x, box.max.x)
+        );
+        closestPoint.y = Math.max(
+          box.min.y,
+          Math.min(closestPoint.y, box.max.y)
+        );
+        closestPoint.z = Math.max(
+          box.min.z,
+          Math.min(closestPoint.z, box.max.z)
+        );
+
+        //kalau closet point dan center player < dari radius yg di tentukan terjadi colition
+        const distance = sphere.center.distanceTo(closestPoint);
+        return distance < sphere.radius;
+      }
+
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        const time = performance.now();
+        const delta = (time - prevTime) / 1000;
+        // update coin
+        if (coinMixer) {
+          coinMixer.update(delta);
+        }
+
+        // Update pool animations
+        if (mixer) {
+          mixer.update(delta);
+        }
+        //update pool 2
+        if (mixer2) {
+          mixer2.update(delta);
+        }
+
+        // Update arcade animations
+        if (arcadeMixer) {
+          arcadeMixer.update(delta);
+        }
+
+        // Update gumball machine animations
+        if (gumballMixer) {
+          gumballMixer.update(delta);
+        }
+        // Update vending machine animations
+        if (vendingMixer) {
+          vendingMixer.update(delta);
+        }
+
+        // Update light switch animations
+        if (lightSwitchMixer) {
+          lightSwitchMixer.update(delta);
+        }
+
+        if (controls.isLocked === true) {
+          velocity.x -= velocity.x * 10.0 * delta;
+          velocity.z -= velocity.z * 10.0 * delta;
+          //relative dari kamera depan belakang
+          const forward = new THREE.Vector3(0, 0, -1);
+          forward.applyQuaternion(camera.quaternion);
+          forward.y = 0;
+          forward.normalize();
+          //relative dari kamera kiri kanan
+          const right = new THREE.Vector3(1, 0, 0);
+          right.applyQuaternion(camera.quaternion);
+          right.y = 0;
+          right.normalize();
+
+          direction.set(0, 0, 0);
+
+          // movement relative dari kamera
+          if (moveForward) direction.add(forward);
+          if (moveBackward) direction.sub(forward);
+          if (moveRight) direction.add(right);
+          if (moveLeft) direction.sub(right);
+
+          if (direction.length() > 0) {
+            direction.normalize();
+
+            // force untuk movement
+            const movementSpeed = 1000.0 * delta;
+            velocity.x = direction.x * movementSpeed;
+            velocity.z = direction.z * movementSpeed;
+          }
+
+          let moveX = velocity.x * delta;
+          let moveZ = velocity.z * delta;
+
+          //calculate new pos
+          const xPosition = new THREE.Vector3().copy(camera.position);
+          xPosition.x += moveX;
+
+          const zPosition = new THREE.Vector3().copy(camera.position);
+          zPosition.z += moveZ;
+
+          let canMoveX = true;
+          let canMoveZ = true;
+
+          // test untuk boundary dari room
+          const buffer = playerRadius + 0.1;
+          if (
+            xPosition.x < -roomSize / 2 + buffer ||
+            xPosition.x > roomSize / 2 - buffer
+          ) {
+            canMoveX = false;
+          }
+
+          if (
+            zPosition.z < -roomSize / 2 + buffer ||
+            zPosition.z > roomSize / 2 - buffer
+          ) {
+            canMoveZ = false;
+          }
+
+          // test collision user dgn object
+          for (const collider of collisionObjects) {
+            if (canMoveX) {
+              const xSphere = new THREE.Sphere(xPosition, playerRadius);
+              if (checkSphereBoxCollision(xSphere, collider)) {
+                canMoveX = false;
+              }
+            }
+
+            if (canMoveZ) {
+              const zSphere = new THREE.Sphere(zPosition, playerRadius);
+              if (checkSphereBoxCollision(zSphere, collider)) {
+                canMoveZ = false;
+              }
+            }
+          }
+
+          // allow movement player
+          if (canMoveX) {
+            controls.getObject().position.x += moveX;
+          } else {
+            velocity.x = 0;
+          }
+
+          if (canMoveZ) {
+            controls.getObject().position.z += moveZ;
+          } else {
+            velocity.z = 0;
+          }
+        }
+
+        prevTime = time;
+        renderer.render(scene, camera);
+      }
+
+      // Handle window resize
+      window.addEventListener("resize", function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+    </script>
+  </body>
+</html>
